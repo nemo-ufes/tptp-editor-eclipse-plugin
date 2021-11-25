@@ -8,5 +8,22 @@ Bundle-SymbolicName: br.ufes.inf.nemo.teep; singleton:=true
 Bundle-ActivationPolicy: lazy
 Require-Bundle: org.eclipse.xtext,
  org.eclipse.xtext.xbase,
- org.eclipse.equinox.common;bundle-version="3.5.0"
+ org.eclipse.equinox.common;bundle-version="3.5.0",
+ org.eclipse.emf.ecore,
+ org.eclipse.xtext.xbase.lib;bundle-version="2.14.0",
+ org.eclipse.xtext.util,
+ org.eclipse.emf.common,
+ org.antlr.runtime;bundle-version="[3.2.0,3.2.1)"
 Bundle-RequiredExecutionEnvironment: JavaSE-11
+Export-Package: br.ufes.inf.nemo.teep.serializer,
+ br.ufes.inf.nemo.teep.tptp.impl,
+ br.ufes.inf.nemo.teep,
+ br.ufes.inf.nemo.teep.tptp,
+ br.ufes.inf.nemo.teep.parser.antlr.internal,
+ br.ufes.inf.nemo.teep.parser.antlr,
+ br.ufes.inf.nemo.teep.scoping,
+ br.ufes.inf.nemo.teep.generator,
+ br.ufes.inf.nemo.teep.tptp.util,
+ br.ufes.inf.nemo.teep.validation,
+ br.ufes.inf.nemo.teep.services
+Import-Package: org.apache.log4j

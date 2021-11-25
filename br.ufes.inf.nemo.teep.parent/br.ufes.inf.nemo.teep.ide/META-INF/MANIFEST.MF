@@ -8,5 +8,8 @@ Bundle-SymbolicName: br.ufes.inf.nemo.teep.ide; singleton:=true
 Bundle-ActivationPolicy: lazy
 Require-Bundle: br.ufes.inf.nemo.teep,
  org.eclipse.xtext.ide,
- org.eclipse.xtext.xbase.ide
+ org.eclipse.xtext.xbase.ide,
+ org.antlr.runtime;bundle-version="[3.2.0,3.2.1)"
 Bundle-RequiredExecutionEnvironment: JavaSE-11
+Export-Package: br.ufes.inf.nemo.teep.ide.contentassist.antlr,
+ br.ufes.inf.nemo.teep.ide.contentassist.antlr.internal
