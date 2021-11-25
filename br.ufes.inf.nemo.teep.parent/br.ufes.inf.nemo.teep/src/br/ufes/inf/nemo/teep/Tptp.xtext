@@ -1,0 +1,228 @@
+grammar br.ufes.inf.nemo.teep.Tptp with org.eclipse.xtext.common.Terminals
+	hidden (IGNORED_COMMENT, WS)
+
+generate tptp "http://www.ufes.br/inf/nemo/teep/Tptp"
+
+// simplified version of http://www.tptp.org/TPTP/SyntaxBNF.html#fof_formula
+
+// TODO: document supported syntax subset
+
+Specification:
+		sentences+=Sentence+;
+	
+Sentence: 
+	CommentSentence | AnnotatedFormula;
+
+/**
+ * CommentSentences were introduced starting with %% so they that are
+ * not ignored by Xtext and can be manipulated later in transformations.
+ * This is useful for generated documentation and is not part of the 
+ * 'official' TPTP syntax. For the official syntax, these are just regular
+ * comments.
+ */
+CommentSentence:
+	comment = COMMENT
+;
+
+terminal COMMENT:
+    '%%' !('\n'|'\r')* ('\r'? '\n')?;
+
+terminal IGNORED_COMMENT : '%'(!'%') !('\n'|'\r')* ('\r'? '\n')?;
+    
+AnnotatedFormula:
+	'fof(' name=LOWERWORD "," role=FormulaRole "," expr=Expression  ').';
+
+enum FormulaRole:
+	AXIOM="axiom" | 
+	HYPOTHESIS="hypothesis" | 
+	DEFINITION="definition" | 
+	ASSUMPTION="assumption" |
+    LEMMA= "lemma" | 
+    THEOREM="theorem" | 
+    COROLLARY="corollary" | 
+    CONJECTURE="conjecture" |
+    NEGATED_CONJECTURE = "negated_conjecture" |
+    PLAIN="plain" |
+    TYPE="type" |
+    FI_DOMAIN="fi_domain" | 
+    FI_FUNCTORS="fi_functors" | 
+    FI_PREDICATES="fi_predicates" |
+    UNKNOWN="unknown";
+
+Expression:
+	BinaryExpression;
+
+BinaryExpression returns Expression:
+	UnitExpression 
+			( ({OrExpression.operands+=current} '|' operands+=UnitExpression ('|' operands+=UnitExpression)*)  
+ 			 |({AndExpression.operands+=current} '&'  operands+=UnitExpression ('&' operands+=UnitExpression)*) 
+ 			 |({BinaryNonAssociativeExpression.left=current} operator=("<=>" | "=>" | "<=" | "<~>") right=UnitExpression) )?;
+
+UnitExpression returns Expression:
+	 NegationExpression | InfixComparisonExpression | UnitaryExpression;
+
+NegationExpression returns Expression:
+	{NegationExpression} '~' operand=UnitExpression
+;
+
+InfixComparisonExpression returns Expression:
+	Variable {InfixComparisonExpression.left=current} operator=("="|"!=") right=ComparisonExpressionRhs;
+	
+
+ComparisonExpressionRhs:	
+	Variable | Constant;
+	
+UnitaryExpression returns Expression:
+ 	QuantifiedExpression |
+	'(' Expression ')' | 
+	AtomicExpression;
+
+QuantifiedExpression returns Expression:
+	{QuantifiedExpression} quantifier=("?"|"!") "[" variables+=Variable ("," variables+=Variable)* "]" ":" formula=UnitExpression;
+	
+Variable: 
+	{Variable} name=UPPERWORD
+;
+
+AtomicExpression returns Expression:
+	Predicate | Constant
+;
+
+Predicate returns Expression: 
+	{Predicate} name=LOWERWORD "(" terms+=Term ("," terms+=Term)* ")"
+;
+
+Term:
+	Variable | Constant
+;
+
+Constant:
+	 name=LOWERWORD
+;
+
+// for constants and predicates
+terminal LOWERWORD: 
+    ('a'..'z') ('a'..'z'|'A'..'Z'|'_'|'0'..'9')*; 
+
+// for variables
+terminal UPPERWORD: 
+    ('A'..'Z') ('a'..'z'|'A'..'Z'|'_'|'0'..'9')*; 
+
+/* 
+
+Relevant fragment of 
+http://www.tptp.org/TPTP/SyntaxBNF.html#fof_formula
+* 
+* 
+%----FOF formulae.
+<fof_formula>          ::= <fof_logic_formula> | <fof_sequent>
+<fof_logic_formula>    ::= <fof_binary_formula> | <fof_unary_formula> |
+                           <fof_unitary_formula>
+%----Future answer variable ideas | <answer_formula>
+<fof_binary_formula>   ::= <fof_binary_nonassoc> | <fof_binary_assoc>
+%----Only some binary connectives are associative
+%----There's no precedence among binary connectives
+<fof_binary_nonassoc>  ::= <fof_unit_formula> <nonassoc_connective>
+                           <fof_unit_formula>
+%----Associative connectives & and | are in <binary_assoc>
+<fof_binary_assoc>     ::= <fof_or_formula> | <fof_and_formula>
+<fof_or_formula>       ::= <fof_unit_formula> <vline> <fof_unit_formula> |
+                           <fof_or_formula> <vline> <fof_unit_formula>
+<fof_and_formula>      ::= <fof_unit_formula> & <fof_unit_formula> |
+                           <fof_and_formula> & <fof_unit_formula>
+<fof_unary_formula>    ::= <unary_connective> <fof_unit_formula> |
+                           <fof_infix_unary>
+%----<fof_term> != <fof_term> is equivalent to ~ <fof_term> = <fof_term>
+<fof_infix_unary>      ::= <fof_term> <infix_inequality> <fof_term>
+%----<fof_unitary_formula> are in ()s or do not have a connective
+<fof_unit_formula>     ::= <fof_unitary_formula> | <fof_unary_formula>
+<fof_unitary_formula>  ::= <fof_quantified_formula> | <fof_atomic_formula> | 
+                           (<fof_logic_formula>)
+%----All variables must be quantified
+<fof_quantified_formula> ::= <fof_quantifier> [<fof_variable_list>] :
+                           <fof_unit_formula>
+<fof_variable_list>    ::= <variable> | <variable>,<fof_variable_list>
+<fof_atomic_formula>   ::= <fof_plain_atomic_formula> | 
+                           <fof_defined_atomic_formula> |
+                           <fof_system_atomic_formula>
+<fof_plain_atomic_formula> ::= <fof_plain_term>
+<fof_plain_atomic_formula> :== <proposition> | <predicate>(<fof_arguments>)
+<fof_defined_atomic_formula> ::= <fof_defined_plain_formula> | 
+                           <fof_defined_infix_formula>
+<fof_defined_plain_formula> ::= <fof_defined_plain_term>
+<fof_defined_plain_formula> :== <defined_proposition> | 
+                           <defined_predicate>(<fof_arguments>)
+<fof_defined_infix_formula> ::= <fof_term> <defined_infix_pred> <fof_term>
+
+%----FOF terms.
+<fof_plain_term>       ::= <constant> | <functor>(<fof_arguments>)
+%----Defined terms have TPTP specific interpretations
+<fof_defined_term>     ::= <defined_term> | <fof_defined_atomic_term>
+<fof_defined_atomic_term>  ::= <fof_defined_plain_term>
+<fof_defined_plain_term>   ::= <defined_constant> | 
+                           <defined_functor>(<fof_arguments>)
+%----System terms have system specific interpretations
+%----Arguments recurse back to terms (this is the FOF world here)
+<fof_arguments>        ::= <fof_term> | <fof_term>,<fof_arguments>
+%----These are terms used as arguments. Not the entry point for terms because
+%----<fof_plain_term> is also used as <fof_plain_atomic_formula>. The <tff_
+%----options are for only TFF, but are here because <fof_plain_atomic_formula> 
+%----is used in <fof_atomic_formula>, which is also used as 
+%----<tff_atomic_formula>.
+<fof_term>             ::= <fof_function_term> | <variable>
+<fof_function_term>    ::= <fof_plain_term> | <fof_defined_term> | 
+                           <fof_system_term>
+	
+;
+* */
+
+
+	
+/* 	
+ * 
+ * %----Connectives - FOF
+<fof_quantifier>       ::= ! | ?
+<nonassoc_connective>  ::= <=> | => | <= | <~> | ~<vline> | ~&
+<assoc_connective>     ::= <vline> | &
+<unary_connective>     ::= ~
+* 
+* %----For all language types
+<atom>                 ::= <untyped_atom> | <defined_constant>
+<untyped_atom>         ::= <constant> | <system_constant>
+
+<proposition>          :== <predicate>
+<predicate>            :== <atomic_word>
+<defined_proposition>  :== <defined_predicate>
+<defined_proposition>  :== $true | $false
+<defined_predicate>    :== <atomic_defined_word>
+<defined_predicate>    :== $distinct |
+                           $less | $lesseq | $greater | $greatereq |
+                           $is_int | $is_rat |
+                           $box_P | $box_i | $box_int | $box |
+                           $dia_P | $dia_i | $dia_int | $dia
+%----$distinct means that each of it's constant arguments are pairwise !=. It
+%----is part of the TFF syntax. It can be used only as a fact, not under any
+%----connective.
+<defined_infix_pred>   ::= <infix_equality>
+<system_proposition>   :== <system_predicate>
+<system_predicate>     :== <atomic_system_word>
+<infix_equality>       ::= =
+<infix_inequality>     ::= !=
+
+<constant>             ::= <functor>
+<functor>              ::= <atomic_word>
+<system_constant>      ::= <system_functor>
+<system_functor>       ::= <atomic_system_word>
+<defined_constant>     ::= <defined_functor>
+<defined_functor>      ::= <atomic_defined_word>
+<defined_functor>      :== $uminus | $sum | $difference | $product |
+                           $quotient | $quotient_e | $quotient_t | $quotient_f |
+                           $remainder_e | $remainder_t | $remainder_f |
+                           $floor | $ceiling | $truncate | $round |
+                           $to_int | $to_rat | $to_real
+<defined_term>         ::= <number> | <distinct_object>
+<variable>             ::= <upper_word>
+* 
+*/
+
+	
