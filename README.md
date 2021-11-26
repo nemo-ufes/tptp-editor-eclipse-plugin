@@ -23,7 +23,7 @@ See <https://github.com/marklemay/tptpParser> for a different project unaffiliat
 
 Open Eclipse and go to "Help->Install New Software..."
 
-Select "Add..." and then "Archive..." Point to the `br.ufes.inf.nemo.teep.repository-1.0.0-SNAPSHOT.zip` file you downloaded from [releases](releases). You may optionally give a name to the repository (say "Teep local repository.")
+Select "Add..." and then "Archive..." Point to the `br.ufes.inf.nemo.teep.repository-1.0.0-SNAPSHOT.zip` file you downloaded from [releases](https://github.com/nemo-ufes/tptp-editor-eclipse-plugin/releases). You may optionally give a name to the repository (say "Teep local repository.")
 
 Select then the "Tptp" feature and click "Next>" and "Finish". Eclipse will calculate all the required dependencies and install them. It will warn you that you are installing unsigned software. Click "Install Anyway" and restart Eclipse.
 
@@ -31,11 +31,11 @@ Select then the "Tptp" feature and click "Next>" and "Finish". Eclipse will calc
 
 In Eclipse, select "File->New->Project..." and create a "General" "Project". 
 
-Select "File->New->File..." and create a file with the extension `.p`. You will be aspect to convert the projecto to an Xtext project. Click on "Yes". Your file will then be ready for editing.
+Select "File->New->File..." and create a file with the extension `.p`. You will be asked to convert the project to an Xtext project. Click on "Yes". Your file will then be ready for editing.
 
 When you save a file, teep will generate several output files under `src-gen` (`.clif`, `.tex`, `.html`, `.txt`).
 
-Example TPTP specifications written in teep can be found in <https://github.com/nemo-ufes/ufo-types> and <https://github.com/nemo-ufes/mlt-ontology>.
+Example TPTP specifications written in teep can be found in <https://github.com/nemo-ufes/ufo-types> and <https://github.com/nemo-ufes/mlt-ontology>. Many other TPTP files can be found at <https://www.tptp.org>.
 
 Once you are ready, use theorem provers at [System on TPTP](http://www.tptp.org/cgi-bin/SystemOnTPTP). (Hint: only one conjecture at a time is admitted by the system, comment all conjectures not under scrutiny with `%`.)
 
