@@ -2,6 +2,8 @@
 
 Teep is an Eclipse plugin for a subset of the TPTP syntax (restricted to First-Order Formulas) which can be used with many theorem provers (see <https://www.tptp.org>). It supports syntax highlight and syntax verification.
 
+![Example .p file](./screenshots/09-example-p-file.png)
+
 Most importantly, from a specification in TPTP (with the `.p` extension), teep generates:
 
 - [CLIF (the Common Logic Interchange Format)](https://www.iso.org/standard/66249.html)
@@ -9,11 +11,19 @@ Most importantly, from a specification in TPTP (with the `.p` extension), teep g
 - HTML expressions with [MathML](https://www.w3.org/Math/)
 - Plain-text ASCII content
 
+![Example .clif file](./screenshots/clif.png)
+
+![Example .tex file](./screenshots/latex-eqnarray.png)
+
+![Example .html file](./screenshots/html.png)
+
+![Example .html file](./screenshots/plain-text-ascii.png)
+
 Author: [João Paulo A. Almeida](http://nemo.inf.ufes.br/jpalmeida)
 
 ## Maintenance
 
-This project is maintained in a best-effort basis. It was designed for my own purposes, but I am sharing it in the hope that it may help others. I cannot commit to fixing bugs and adding features. I do not claim strict conformance to the TPTP grammar, CLIF or any other standard.
+This project is maintained on a best-effort basis. It was designed for my own purposes, but I am sharing it in the hope that it may help others. I cannot commit to fixing bugs and adding features. I do not claim strict conformance to the TPTP grammar, CLIF or any other standard.
 
 I've used Xtext 2.25.0 for development and tested it under Eclipse 2021-09 (4.21.0).
 
@@ -34,8 +44,6 @@ In Eclipse, select "File->New->Project..." and create a "General" "Project".
 Select "File->New->File..." and create a file with the extension `.p`. You will be asked to convert the project to an Xtext project. Click on "Yes". Your file will then be ready for editing.
 
 When you save a file, teep will generate several output files under `src-gen` (`.clif`, `.tex`, `.html`, `.txt`).
-
-![Example .p file](./screenshots/09-example-p-file.png)
 
 Example TPTP specifications written in teep can be found in <https://github.com/nemo-ufes/ufo-types> and <https://github.com/nemo-ufes/mlt-ontology>. Many other TPTP files can be found at <https://www.tptp.org>.
 
