@@ -21,22 +21,26 @@ See <https://github.com/marklemay/tptpParser> for a different project unaffiliat
 
 ## Installing
 
-Download Eclipse (I'ved tested it in Eclipse 2021-09) and install it.  
+Open Eclipse and go to "Help->Install New Software..."
 
-Open Eclipse and go to "Help->Install New Software...". Select "Add..." and then "Archive..." Point to the `br.ufes.inf.nemo.teep.repository-1.0.0-SNAPSHOT.zip` file you downloaded from [releases]. You may optionally give a name to the repository (say "Teep local repository.")
+Select "Add..." and then "Archive..." Point to the `br.ufes.inf.nemo.teep.repository-1.0.0-SNAPSHOT.zip` file you downloaded from [releases](releases). You may optionally give a name to the repository (say "Teep local repository.")
 
 Select then the "Tptp" feature and click "Next>" and "Finish". Eclipse will calculate all the required dependencies and install them. It will warn you that you are installing unsigned software. Click "Install Anyway" and restart Eclipse.
 
 ## Usage
 
-In Eclipse, select "File->New->Project..." and create a "General" "Project". Select "File->New->File..." and create a file with the extension `.p`. You will be aspect to convert the projecto to an Xtext project. Click on "Yes". You file will be ready for editing.
+In Eclipse, select "File->New->Project..." and create a "General" "Project". 
 
-When you save a file it teep will generate several files under `src-gen`.
+Select "File->New->File..." and create a file with the extension `.p`. You will be aspect to convert the projecto to an Xtext project. Click on "Yes". Your file will then be ready for editing.
+
+When you save a file, teep will generate several output files under `src-gen` (`.clif`, `.tex`, `.html`, `.txt`).
 
 Example TPTP specifications written in teep can be found in <https://github.com/nemo-ufes/ufo-types> and <https://github.com/nemo-ufes/mlt-ontology>.
 
 Once you are ready, use theorem provers at [System on TPTP](http://www.tptp.org/cgi-bin/SystemOnTPTP). (Hint: only one conjecture at a time is admitted by the system, comment all conjectures not under scrutiny with `%`.)
 
+If you find teep useful, please let me know <mailto:jpalmeida@ieee.org>.
+
 ## License
 
-Distributed under the MIT License. See `LICENSE.txt` for more information.
+Distributed under the MIT License. See `LICENSE` for more information.
