@@ -39,12 +39,13 @@ Example TPTP specifications written in teep can be found in <https://github.com/
 
 When you save a `.p` file, teep will generate several output files under `src-gen` (`.clif`, `.tex`, `.html`, `.txt`).
 
+Example in CLIF:
 ![Example .clif file](./screenshots/clif.png)
-
+Example in LaTeX:
 ![Example .tex file](./screenshots/latex-eqnarray.png)
-
+Example in HTML with MathML:
 ![Example .html file](./screenshots/html.png)
-
+Example in plain-text ASCII:
 ![Example .txt file](./screenshots/plain-text-ascii.png)
 
 Once you are ready, use theorem provers at [System on TPTP](http://www.tptp.org/cgi-bin/SystemOnTPTP). (Hint: only one conjecture at a time is admitted by the system, comment all conjectures not under scrutiny with `%`.)
