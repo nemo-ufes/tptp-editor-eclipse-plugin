@@ -35,6 +35,8 @@ Select "File->New->File..." and create a file with the extension `.p`. You will 
 
 When you save a file, teep will generate several output files under `src-gen` (`.clif`, `.tex`, `.html`, `.txt`).
 
+![Example .p file](./screenshots/09-example-p-file.png)
+
 Example TPTP specifications written in teep can be found in <https://github.com/nemo-ufes/ufo-types> and <https://github.com/nemo-ufes/mlt-ontology>. Many other TPTP files can be found at <https://www.tptp.org>.
 
 Once you are ready, use theorem provers at [System on TPTP](http://www.tptp.org/cgi-bin/SystemOnTPTP). (Hint: only one conjecture at a time is admitted by the system, comment all conjectures not under scrutiny with `%`.)
