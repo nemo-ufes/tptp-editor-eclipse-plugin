@@ -3,6 +3,19 @@
  */
 package br.ufes.inf.nemo.teep.generator
 
+import br.ufes.inf.nemo.teep.tptp.AndExpression
+import br.ufes.inf.nemo.teep.tptp.AnnotatedFormula
+import br.ufes.inf.nemo.teep.tptp.BinaryNonAssociativeExpression
+import br.ufes.inf.nemo.teep.tptp.CommentSentence
+import br.ufes.inf.nemo.teep.tptp.Constant
+import br.ufes.inf.nemo.teep.tptp.Expression
+import br.ufes.inf.nemo.teep.tptp.InfixComparisonExpression
+import br.ufes.inf.nemo.teep.tptp.NegationExpression
+import br.ufes.inf.nemo.teep.tptp.OrExpression
+import br.ufes.inf.nemo.teep.tptp.Predicate
+import br.ufes.inf.nemo.teep.tptp.QuantifiedExpression
+import br.ufes.inf.nemo.teep.tptp.Specification
+import br.ufes.inf.nemo.teep.tptp.Variable
 import org.eclipse.emf.ecore.resource.Resource
 import org.eclipse.xtext.generator.AbstractGenerator
 import org.eclipse.xtext.generator.IFileSystemAccess2
@@ -16,10 +29,900 @@ import org.eclipse.xtext.generator.IGeneratorContext
 class TptpGenerator extends AbstractGenerator {
 
 	override void doGenerate(Resource resource, IFileSystemAccess2 fsa, IGeneratorContext context) {
-//		fsa.generateFile('greetings.txt', 'People to greet: ' + 
-//			resource.allContents
-//				.filter(Greeting)
-//				.map[name]
-//				.join(', '))
+
+/// FIXME: add comments for name and role
+/// FIXME: generate html page
+/// TODO: linebreaks and indentation
+		val toMathML = new MapToMathML as Mapping
+		val toMathJax = new MapToMathJax as Mapping
+		val toMathOMML = new MapToMathOMML as Mapping
+		val toUnicode = new MapToUnicode as Mapping
+		val toTeX = new MapToTeX as Mapping
+		val toItemizedTeX = new MapToTeXItemized as Mapping
+
+		// TODO: create a clif mapping
+		val toClif = new MapToClif as Mapping
+
+		val spec = resource.contents.get(0) as Specification
+		val filename = resource.getURI().lastSegment
+
+		fsa.generateFile(filename + '_plain.html', '''
+			«toMathML.preamble»
+			«FOR s : spec.sentences»
+				«toMathML.beginning»				
+				«IF (s instanceof CommentSentence)»
+				<!-- «s.comment» -->
+				«ENDIF»
+				«IF (s instanceof AnnotatedFormula)»
+				«s.expr.convertSentence(toMathML)»
+				«ENDIF»
+				«toMathML.end»
+			«ENDFOR»
+			«toMathML.tailpiece»
+		''')
+
+		fsa.generateFile(filename + '_mathjax.html', '''
+			«toMathJax.preamble»
+			«FOR s : spec.sentences»
+				«IF (s instanceof AnnotatedFormula)»
+				«toMathJax.beginning»
+				«s.expr.convertSentence(toMathJax)»
+				«toMathJax.end»
+				«ENDIF»				
+			«ENDFOR»
+			«toMathJax.tailpiece»
+		''')
+
+		fsa.generateFile(filename + '_word_document.xml', '''
+			«toMathOMML.preamble»
+			«FOR s : spec.sentences»
+				«IF (s instanceof AnnotatedFormula)»
+				«toMathOMML.beginning»
+				«s.expr.convertSentence(toMathOMML)»
+				«toMathOMML.end»
+				«ENDIF»
+			«ENDFOR»
+			«toMathOMML.tailpiece»
+		''')
+
+		fsa.generateFile(filename + '_array.tex', '''
+			«toTeX.preamble»
+			«FOR s : spec.sentences»
+				«IF (s instanceof AnnotatedFormula)»
+				«toTeX.beginning»
+				«s.expr.convertSentence(toTeX)»
+				«toTeX.end»
+				«ENDIF»
+			«ENDFOR»
+			«toTeX.tailpiece»
+		''')
+
+		fsa.generateFile(filename + '_itemized.tex', '''
+			«toItemizedTeX.preamble»
+			«FOR s : spec.sentences»
+				«IF (s instanceof AnnotatedFormula)»
+				«toItemizedTeX.beginning»
+				«s.expr.convertSentence(toItemizedTeX)»
+				«toItemizedTeX.end»
+				«ENDIF»
+			«ENDFOR»
+			«toItemizedTeX.tailpiece»
+		''')
+
+		fsa.generateFile(filename + '.txt', '''
+			«FOR s : spec.sentences»
+				«IF (s instanceof AnnotatedFormula)»
+				«toUnicode.beginning»
+				«s.expr.convertSentence(toUnicode)»
+				«toUnicode.end»
+				«ENDIF»
+			«ENDFOR»
+		''')
+
+		// FIXME: trimming is a bit radical for comments, check comments for need to escape single quote
+		fsa.generateFile(filename + '.clif', '''
+			«FOR s : spec.sentences»
+				«IF (s instanceof CommentSentence)»(cl-comment '«s.comment.substring(2,s.comment.length-1).trim»')«ENDIF»
+				«IF (s instanceof AnnotatedFormula)»«toClif.beginning» «s.name»
+				«s.expr.convertSentence(toClif)»
+				«toClif.end»«ENDIF»
+			«ENDFOR»
+		''')
+
 	}
+
+/**
+ * changes were required to convertSentence to treat special ordering in clif
+ */
+ 
+ 	def dispatch String convertSentence(QuantifiedExpression qs, MapToClif m) '''
+		«m.open»«IF (qs.quantifier=="!")»«m.forall»«ENDIF»«IF (qs.quantifier=="?")»«m.exists»«ENDIF» «FOR var_ : qs.variables BEFORE m.open SEPARATOR ' ' AFTER m.close»«m.variable(convertTerm(var_, m))»«ENDFOR»
+			«convertSentence(qs.formula, m)»«m.close»
+	'''
+
+ 	def dispatch String convertSentence(BinaryNonAssociativeExpression expr, MapToClif m) '''
+		«m.open»«IF (expr.operator=="<=>")»«m.iff»«ENDIF»«IF (expr.operator=="=>")»«m.if_»«ENDIF» «convertSentence(expr.left, m)»
+			«convertSentence(expr.right, m)»«m.close»
+	'''
+	
+	def dispatch String convertSentence(AndExpression expr, MapToClif m) {
+		var convertedString = new String
+		
+		convertedString += m.open()
+		convertedString += m.and()
+		convertedString += " "
+		var i = 0
+		for (operand : expr.operands) {
+			convertedString += convertSentence(operand, m);
+			if (i < expr.operands.size() - 1)
+				convertedString += " ";
+			i++
+		}
+		convertedString += m.close()
+		return convertedString
+	}
+	
+	
+	def dispatch String convertSentence(OrExpression expr, MapToClif m) {
+		var convertedString = new String
+		
+		convertedString += m.open()
+		convertedString += m.or()
+		convertedString += " "
+		var i = 0
+		for (operand : expr.operands) {
+			convertedString += convertSentence(operand, m);
+			if (i < expr.operands.size() - 1)
+				convertedString += " ";
+			i++
+		}
+		convertedString += m.close()
+		return convertedString
+	}
+
+	def dispatch String convertSentence(NegationExpression expr, MapToClif m) {
+		var convertedString = new String;
+		
+		convertedString += m.open();
+		convertedString += m.not();
+		convertedString += " ";
+
+		convertedString += convertSentence(expr.operand, m);
+		convertedString += m.close();
+		return convertedString
+	}
+
+	// FIXME: inequality
+	def dispatch String convertSentence(InfixComparisonExpression e, MapToClif m) {
+		var convertedString = new String;
+		
+		convertedString += m.open();
+		convertedString += m.equals_();
+		convertedString += m.variable(convertTerm(e.left, m).toString); // FIXME ?
+		convertedString += " ";
+		convertedString += m.variable(convertTerm(e.right, m).toString); // FIXME ?
+		convertedString += m.close();
+		return convertedString
+	}
+
+	def dispatch String convertSentence(Predicate p, MapToClif m) {
+		var convertedString = new String
+		
+		convertedString += m.open();
+		convertedString += m.predicate(p.name);
+		convertedString += " ";
+		var i = 0;
+		for (t : p.terms) {
+			convertedString += m.variable(convertTerm(t, m)); // could be constant
+			if (i < p.terms.size() - 1)
+				convertedString += " ";
+			i++;
+		}
+		convertedString += m.close();
+		return convertedString;
+	}
+	
+	
+	/**
+	 * Original conversion (just not applicable to clif, but for every other mapping)
+	 */
+
+	def dispatch String convertSentence(QuantifiedExpression qs, Mapping m) {
+		var convertedString = new String;
+		convertedString += switch (qs.quantifier) {
+			case "!": m.forall()
+			case "?": m.exists()
+		}
+		var i = 0;
+
+		for (var_ : qs.variables) {
+			convertedString += m.variable(convertTerm(var_, m));
+			if (i < qs.variables.size() - 1) {
+				convertedString += m.comma();
+			}
+			i++;
+		}
+
+		convertedString += m.open(); // TODO: consider space instead. precedence of logic operators
+		convertedString += convertSentence(qs.formula, m);
+		convertedString += m.close();
+		return convertedString;
+	}
+
+	def dispatch String convertSentence(BinaryNonAssociativeExpression expr, Mapping m) {
+		var convertedString = new String;
+
+		if (expr.left instanceof BinaryNonAssociativeExpression) {
+			convertedString += m.open();
+		} // /
+		convertedString += convertSentence(expr.left, m);
+		if (expr.left instanceof BinaryNonAssociativeExpression) {
+			convertedString += m.close();
+		} // /
+		convertedString += switch (expr.operator) {
+			case "<=>": m.iff()
+			case "=>": m.if_()
+		// FIXME support other kinds of operators
+		}
+
+		if (expr.right instanceof BinaryNonAssociativeExpression) {
+			convertedString += m.open();
+		} // /
+		convertedString += convertSentence(expr.right, m);
+		if (expr.right instanceof BinaryNonAssociativeExpression) {
+			convertedString += m.close();
+		} // /
+		return convertedString;
+	}
+
+	def dispatch String convertSentence(AndExpression expr, Mapping m) {
+		var convertedString = new String
+//		convertedString += m.open()
+		var i = 0
+		for (operand : expr.operands) {
+			if ((operand instanceof OrExpression) || (operand instanceof InfixComparisonExpression)) {
+				convertedString += m.open();
+			} // /
+			convertedString += convertSentence(operand, m);
+			if ((operand instanceof OrExpression) || (operand instanceof InfixComparisonExpression)) {
+				convertedString += m.close();
+			} // /
+			if (i < expr.operands.size() - 1)
+				convertedString += m.and();
+			i++
+		}
+//		convertedString += m.close()
+		return convertedString
+	}
+
+	def dispatch String convertSentence(OrExpression expr, Mapping m) {
+		var convertedString = new String
+		// convertedString += m.open()
+		var i = 0
+		for (operand : expr.operands) {
+
+			if ((operand instanceof AndExpression) || (operand instanceof InfixComparisonExpression)) {
+				convertedString += m.open();
+			} // /			
+			convertedString += convertSentence(operand, m);
+			if ((operand instanceof AndExpression) || (operand instanceof InfixComparisonExpression)) {
+				convertedString += m.close();
+			} // /
+			if (i < expr.operands.size() - 1)
+				convertedString += m.or();
+			i++
+		}
+//		convertedString += m.close()
+		return convertedString
+	}
+
+	def dispatch String convertSentence(NegationExpression expr, Mapping m) {
+		var convertedString = new String;
+		convertedString += m.not();
+		if ((expr.operand instanceof AndExpression) || (expr.operand instanceof OrExpression) ||
+			(expr.operand instanceof InfixComparisonExpression) ||
+			(expr.operand instanceof BinaryNonAssociativeExpression)) {
+			convertedString += m.open();
+		} // /			
+		convertedString += convertSentence(expr.operand, m);
+		if ((expr.operand instanceof AndExpression) || (expr.operand instanceof OrExpression) ||
+			(expr.operand instanceof InfixComparisonExpression) ||
+			(expr.operand instanceof BinaryNonAssociativeExpression)) {
+			convertedString += m.close();
+		} // /	
+		return convertedString
+	}
+
+	// FIXME: inequality
+	def dispatch String convertSentence(InfixComparisonExpression e, Mapping m) {
+		var convertedString = new String;
+		convertedString += m.variable(convertTerm(e.left, m).toString); // FIXME
+		convertedString += m.equals_();
+		convertedString += m.variable(convertTerm(e.right, m).toString); // FIXME
+		return convertedString
+	}
+
+	def dispatch String convertSentence(Predicate p, Mapping m) {
+		var convertedString = new String
+		convertedString += m.predicate(p.name);
+		convertedString += m.open();
+		var i = 0;
+		for (t : p.terms) {
+			convertedString += m.variable(convertTerm(t, m)); // could be constant
+			if (i < p.terms.size() - 1)
+				convertedString += m.comma();
+			i++;
+		}
+		convertedString += m.close();
+		return convertedString;
+	}
+
+	def dispatch String convertTerm(Variable v, Mapping m) {
+		return v.name.toLowerCase;
+	}
+
+	def dispatch String convertTerm(Constant c, Mapping m) {
+		return c.name.toFirstUpper;
+	}
+
+	def dispatch convertSentence(Expression e, Mapping m) '''
+		«e.toString» 		
+	'''
+
+}
+
+interface Mapping {
+	def String preamble()
+
+	def String beginning()
+
+	def String forall()
+
+	def String exists()
+
+	def String existsOne()
+
+	def String predicate(String name)
+
+	def String variable(String name)
+
+	def String open()
+
+	def String close()
+
+	def String iff()
+
+	def String if_()
+
+	def String not()
+
+	def String and()
+
+	def String or()
+
+	def String comma()
+
+	def String colon()
+
+	def String end()
+
+	def String equals_()
+
+	def String comment(String string)
+
+	def String tailpiece()
+}
+
+class MapToClif implements Mapping {
+		
+	override String beginning() {
+		return "(cl-text ";
+	}
+
+	override String forall() {
+		return "forall";
+	}
+
+	override String exists() {
+		return "exists";
+	}
+
+	override String existsOne() {
+		return "∃!";
+	}
+
+	override String predicate(String name) {
+		return name;
+	}
+
+	override String variable(String name) {
+		return name;
+	}
+
+	override String open() {
+		return "(";
+	}
+
+	override String close() {
+		return ")";
+	}
+
+	override String iff() {
+		return "iff";
+	}
+
+	override String if_() {
+		return "if";
+	}
+
+	override String not() {
+		return "not";
+	}
+
+	override String and() {
+		return "and";
+	}
+
+	override String or() {
+		return "or";
+	}
+
+	override String end() {
+		return ")";
+	}
+
+	override String comma() {
+		return " ";
+	}
+
+	override String colon() {
+		return ":";
+	}
+
+	override String equals_() {
+		return "=";
+	}
+
+	override comment(String string) {
+		return string;
+	}
+
+	override preamble() {
+		throw new UnsupportedOperationException("TODO: auto-generated method stub")
+	}
+
+	override tailpiece() {
+		throw new UnsupportedOperationException("TODO: auto-generated method stub")
+	}
+
+}
+
+class MapToMathML implements Mapping {
+
+	override String preamble() '''
+		<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+		<html>
+		  <head>
+		    <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+		    <title>test</title>
+		  </head>
+		  <body>
+	'''
+
+	override String beginning() '''
+		<p><?xml version="1.0"?>
+		<math xmlns="http://www.w3.org/1998/Math/MathML" display="block">
+	'''
+
+	override String forall() {
+		return "<mi mathvariant=\"normal\">&#x2200;<!-- ∀ --></mi>";
+	}
+
+	override String exists() {
+		return "<mi mathvariant=\"normal\">&#x2203;<!-- ∃ --></mi>";
+	}
+
+	override String existsOne() {
+		return "<mi mathvariant=\"normal\">&#x2203;!<!-- ∃! --></mi>";
+	}
+
+	override String predicate(String name) {
+		return "<mi mathvariant=\"normal\">" + name + "</mi>";
+	}
+
+	override String variable(String name) {
+		if (name.indexOf("_") != -1)
+			// treat superscript
+			return "<msub>" + "<mi mathvariant=\"italic\">" + name.substring(0, name.indexOf("_")) + "</mi>" +
+				"<mi mathvariant=\"italic\">" + name.substring(name.indexOf("_") + 1, name.length()) + "</mi>" +
+				"</msub>";
+		return "<mi mathvariant=\"italic\">" + name + "</mi>";
+	}
+
+	override String open() {
+		return "<mo stretchy=\"false\">(</mo>";
+	}
+
+	override String close() {
+		return "<mo stretchy=\"false\">)</mo>";
+	}
+
+	override String iff() {
+		return "<mo stretchy=\"false\">&#x2194;</mo>";
+	}
+
+	override String if_() {
+		return "<mo stretchy=\"false\">&#x2192;<!-- → --></mo>";
+	}
+
+	override String not() {
+		return "<mi mathvariant=\"normal\">&#x00AC;<!-- ¬ --></mi>";
+	}
+
+	override String and() {
+		return "<mo>&#x2227;<!-- ∧ --></mo>";
+	}
+
+	override String or() {
+		return "<mo>&#x2228;<!-- ∨ --></mo>";
+	}
+
+	override String comma() {
+		return "<mo>,</mo>";
+	}
+
+	override String colon() {
+		return "<mo>:</mo>";
+	}
+
+	override String equals_() {
+		return "<mo>=</mo>";
+	}
+
+	override String end() {
+		return "</math></p>";
+	}
+
+	override comment(String string) {
+		return "<!-- " + string + " -->"
+	}
+
+	override tailpiece() {
+		'''
+			  </body>
+			</html>
+		'''
+	}
+
+}
+
+class MapToMathOMML implements Mapping {
+	// document.xml
+	// remover <m:rPr><m:sty m:val="p"/></m:rPr> quando for italico
+	def String symbolPrefix() '''<m:r><m:rPr><m:sty m:val="p"/></m:rPr><w:rPr><w:rFonts w:ascii="Cambria Math" w:hAnsi="Cambria Math"/><w:lang w:val="pt-BR"/></w:rPr><m:t>'''
+
+	def String italicsSymbolPrefix() '''<m:r><w:rPr><w:rFonts w:ascii="Cambria Math" w:hAnsi="Cambria Math"/><w:lang w:val="pt-BR"/></w:rPr><m:t>'''
+
+	def String symbolTrailer() '''</m:t></m:r>'''
+
+	override String preamble() '''
+		<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+		<w:document xmlns:wpc="http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas" xmlns:cx="http://schemas.microsoft.com/office/drawing/2014/chartex" xmlns:cx1="http://schemas.microsoft.com/office/drawing/2015/9/8/chartex" xmlns:cx2="http://schemas.microsoft.com/office/drawing/2015/10/21/chartex" xmlns:cx3="http://schemas.microsoft.com/office/drawing/2016/5/9/chartex" xmlns:cx4="http://schemas.microsoft.com/office/drawing/2016/5/10/chartex" xmlns:cx5="http://schemas.microsoft.com/office/drawing/2016/5/11/chartex" xmlns:cx6="http://schemas.microsoft.com/office/drawing/2016/5/12/chartex" xmlns:cx7="http://schemas.microsoft.com/office/drawing/2016/5/13/chartex" xmlns:cx8="http://schemas.microsoft.com/office/drawing/2016/5/14/chartex" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:aink="http://schemas.microsoft.com/office/drawing/2016/ink" xmlns:am3d="http://schemas.microsoft.com/office/drawing/2017/model3d" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:wp14="http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:w10="urn:schemas-microsoft-com:office:word" xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml" xmlns:w15="http://schemas.microsoft.com/office/word/2012/wordml" xmlns:w16cid="http://schemas.microsoft.com/office/word/2016/wordml/cid" xmlns:w16se="http://schemas.microsoft.com/office/word/2015/wordml/symex" xmlns:wpg="http://schemas.microsoft.com/office/word/2010/wordprocessingGroup" xmlns:wpi="http://schemas.microsoft.com/office/word/2010/wordprocessingInk" xmlns:wne="http://schemas.microsoft.com/office/word/2006/wordml" xmlns:wps="http://schemas.microsoft.com/office/word/2010/wordprocessingShape" mc:Ignorable="w14 w15 w16se w16cid wp14"><w:body><w:p w:rsidR="00FB1FE0" w:rsidRDefault="00CB1F42"><w:pPr><w:rPr><w:lang w:val="pt-BR"/></w:rPr></w:pPr><w:r><w:rPr><w:lang w:val="pt-BR"/></w:rPr><w:t>Antes</w:t></w:r></w:p><w:p w:rsidR="00CB1F42" w:rsidRPr="004A4E9D" w:rsidRDefault="00CB1F42"><w:pPr><w:rPr><w:rFonts w:eastAsiaTheme="minorEastAsia"/><w:lang w:val="pt-BR"/></w:rPr></w:pPr>
+	'''
+
+	override String beginning() '''</w:p><w:p w:rsidR="001F6A6A" w:rsidRDefault="001F6A6A"><w:pPr><w:rPr><w:rFonts w:eastAsiaTheme="minorEastAsia"/></w:rPr></w:pPr></w:p><w:p w:rsidR="001F6A6A" w:rsidRPr="001F6A6A" w:rsidRDefault="001F6A6A"><w:pPr><w:rPr><w:rFonts w:eastAsiaTheme="minorEastAsia"/></w:rPr></w:pPr>
+						
+						<m:oMathPara><m:oMath>'''
+
+	override String end() {
+		'''</m:oMath></m:oMathPara>
+						
+						'''
+	}
+
+	override tailpiece() {
+		'''</w:p><w:p w:rsidR="00CB1F42" w:rsidRPr="00CB1F42" w:rsidRDefault="00CB1F42"><w:pPr><w:rPr><w:lang w:val="pt-BR"/></w:rPr></w:pPr><w:r><w:rPr><w:lang w:val="pt-BR"/></w:rPr><w:t>depois</w:t></w:r><w:bookmarkStart w:id="0" w:name="_GoBack"/><w:bookmarkEnd w:id="0"/></w:p><w:sectPr w:rsidR="00CB1F42" w:rsidRPr="00CB1F42" w:rsidSect="000F0BB1"><w:pgSz w:w="11900" w:h="16840"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="708" w:footer="708" w:gutter="0"/><w:cols w:space="708"/><w:docGrid w:linePitch="360"/></w:sectPr></w:body></w:document>
+		'''
+	}
+
+	override String forall() {
+		return symbolPrefix + "∀" + symbolTrailer;
+	}
+
+	override String exists() {
+		return symbolPrefix + "∃" + symbolTrailer;
+	}
+
+	override String existsOne() {
+		return symbolPrefix + "∃!" + symbolTrailer;
+	}
+
+	override String predicate(String name) {
+		return symbolPrefix + name + symbolTrailer;
+	}
+
+	override String variable(String name) {
+//TODO
+//						if (name.indexOf("_") != -1)
+//							// treat superscript
+//							return "<msub>" + "<mi mathvariant=\"italic\">" + name.substring(0, name.indexOf("_")) +
+//								"</mi>" + "<mi mathvariant=\"italic\">" +
+//								name.substring(name.indexOf("_") + 1, name.length()) + "</mi>" + "</msub>";
+		return italicsSymbolPrefix + name + symbolTrailer;
+	}
+
+	override String open() {
+		return symbolPrefix + "(" + symbolTrailer;
+	}
+
+	override String close() {
+		return symbolPrefix + ")" + symbolTrailer;
+	}
+
+	override String iff() {
+		return symbolPrefix + "↔" + symbolTrailer;
+	}
+
+	override String if_() {
+		return symbolPrefix + "→" + symbolTrailer;
+	}
+
+	override String not() {
+		return symbolPrefix + "¬" + symbolTrailer;
+	}
+
+	override String and() {
+		return symbolPrefix + "∧" + symbolTrailer;
+	}
+
+	override String or() {
+		return symbolPrefix + "∨" + symbolTrailer;
+	}
+
+	override String comma() {
+		return symbolPrefix + "," + symbolTrailer;
+	}
+
+	override String colon() {
+		return symbolPrefix + ":" + symbolTrailer;
+	}
+
+	override String equals_() {
+		return symbolPrefix + "=" + symbolTrailer;
+	}
+
+	override comment(String string) {
+		return "<!-- " + string + " -->"
+	}
+
+}
+
+class MapToUnicode implements Mapping {
+	override String beginning() {
+		return "";
+	}
+
+	override String forall() {
+		return "∀";
+	}
+
+	override String exists() {
+		return "∃";
+	}
+
+	override String existsOne() {
+		return "∃!";
+	}
+
+	override String predicate(String name) {
+		return name;
+	}
+
+	override String variable(String name) {
+		return name;
+	}
+
+	override String open() {
+		return "(";
+	}
+
+	override String close() {
+		return ")";
+	}
+
+	override String iff() {
+		return "↔";
+	}
+
+	override String if_() {
+		return "→";
+	}
+
+	override String not() {
+		return "¬";
+	}
+
+	override String and() {
+		return "∧";
+	}
+
+	override String or() {
+		return "∨";
+	}
+
+	override String end() {
+		return "";
+	}
+
+	override String comma() {
+		return ",";
+	}
+
+	override String colon() {
+		return ":";
+	}
+
+	override String equals_() {
+		return "=";
+	}
+
+	override comment(String string) {
+		return string;
+	}
+
+	override preamble() {
+		throw new UnsupportedOperationException("TODO: auto-generated method stub")
+	}
+
+	override tailpiece() {
+		throw new UnsupportedOperationException("TODO: auto-generated method stub")
+	}
+
+}
+
+class MapToMathJax extends MapToTeX {
+	override preamble() {
+		'''
+			<!DOCTYPE html>
+			<html>
+			<head>
+			    <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+			    <title>tex texample</title>
+			</head>
+			<body>
+		'''
+	}
+
+	override String beginning() {
+		return "$$";
+	}
+
+	override String end() {
+		return "$$";
+	}
+
+	override tailpiece() {
+		'''
+			</body>
+			</html>
+		'''
+	}
+
+}
+
+class MapToTeXItemized extends MapToTeX {
+	override preamble() {
+		'''
+			\documentclass{article}
+			\usepackage[utf8]{inputenc}
+			\begin{document}
+			
+			\begin{enumerate}
+		'''
+	}
+
+	override String beginning() {
+		return "\\item $";
+	}
+
+	override String end() {
+		return "$";
+	}
+
+	override tailpiece() {
+		'''
+			\end{enumerate}
+			
+			\end{document}
+		'''
+	}
+}
+
+class MapToTeX implements Mapping {
+	override String beginning() {
+		return "\\begin{eqnarray}";
+	}
+
+	override String forall() {
+		return "\\forall ";
+	}
+
+	override String exists() {
+		return "\\exists ";
+	}
+
+	override String existsOne() {
+		return "\\exists ! ";
+	}
+
+	override String predicate(String name) {
+		return "\\textsf{" + name.replace("_", "\\_") + "}";
+	}
+
+	override String variable(String name) {
+		return name;
+	}
+
+	override String open() {
+		return "(";
+	}
+
+	override String close() {
+		return ")";
+	}
+
+	override String iff() {
+		return "\\leftrightarrow ";
+	}
+
+	override String if_() {
+		return "\\rightarrow ";
+	}
+
+	override String not() {
+		return "\\neg ";
+	}
+
+	override String and() {
+		return "\\wedge ";
+	}
+
+	override String or() {
+		return "\\vee ";
+	}
+
+	override String end() {
+		return "\\end{eqnarray}";
+	}
+
+	override String comma() {
+		return ",";
+	}
+
+	override String colon() {
+		return ":";
+	}
+
+	override String equals_() {
+		return "=";
+	}
+
+	override comment(String string) {
+		return string;
+	}
+
+	override preamble() {
+		'''
+			\documentclass{article}
+			\usepackage[utf8]{inputenc}
+			\begin{document}
+		'''
+	}
+
+	override tailpiece() {
+		'''
+			\end{document}
+		'''
+	}
+
 }
