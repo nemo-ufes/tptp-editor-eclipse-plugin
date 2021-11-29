@@ -9,7 +9,7 @@ Most importantly, from a specification in TPTP (with the `.p` extension), teep g
 - HTML expressions with [MathML](https://www.w3.org/Math/)
 - Plain-text ASCII content
 
-![Example .p file](./screenshots/09-example-p-file.png)
+![Example .p file](./docs/screenshots/09-example-p-file.png)
 
 ## Maintenance
 
@@ -19,7 +19,7 @@ The maintainer ([João Paulo A. Almeida](http://nemo.inf.ufes.br/jpalmeida)) unf
 
 Teep was developed with Xtext 2.25.0 and test under Eclipse 2021-09 (4.21.0).
 
-See <https://github.com/marklemay/tptpParser> for a different project unaffiliated with this and with a focus on a complete TPTP parser.
+(See <https://github.com/marklemay/tptpParser> for a different project unaffiliated with this and with a focus on a complete TPTP parser.)
 
 ## Installing
 
@@ -40,17 +40,23 @@ Example TPTP specifications written in teep can be found in <https://github.com/
 When you save a `.p` file, teep will generate several output files under `src-gen` (`.clif`, `.tex`, `.html`, `.txt`).
 
 Example in CLIF:
-![Example .clif file](./screenshots/clif.png)
+![Example .clif file](./docs/screenshots/clif.png)
 Example in LaTeX:
-![Example .tex file](./screenshots/latex-eqnarray.png)
+![Example .tex file](./docs/screenshots/latex-eqnarray.png)
 Example in HTML with MathML:
-![Example .html file](./screenshots/html.png)
+![Example .html file](./docs/screenshots/html.png)
 Example in plain-text ASCII:
-![Example .txt file](./screenshots/plain-text-ascii.png)
+![Example .txt file](./docs/screenshots/plain-text-ascii.png)
 
 Once you are ready, use theorem provers at [System on TPTP](http://www.tptp.org/cgi-bin/SystemOnTPTP). (Hint: only one conjecture at a time is admitted by the system, comment all conjectures not under scrutiny with `%`.)
 
 If you find teep useful, please let us know <mailto:jpalmeida@ieee.org>.
+
+## Limitations
+
+Only part of the first-order fragment of the TPTP syntax is supported. There is no special support for pre-defined predicates (such as less, greater than, etc.), propositions (true, false); no support for functors (whether pre-defined or not).
+
+Syntax verification does not check for unbound variables.
 
 ## License
 

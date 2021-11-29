@@ -195,14 +195,30 @@ class TptpGenerator extends AbstractGenerator {
 	// FIXME: inequality
 	def dispatch String convertSentence(InfixComparisonExpression e, MapToClif m) {
 		var convertedString = new String;
-		
-		convertedString += m.open();
-		convertedString += m.equals_();
-		convertedString += m.variable(convertTerm(e.left, m).toString); // FIXME ?
-		convertedString += " ";
-		convertedString += m.variable(convertTerm(e.right, m).toString); // FIXME ?
-		convertedString += m.close();
-		return convertedString
+
+		if (e.operator.equals("="))
+		{		
+			convertedString += m.open();
+			convertedString += m.equals_();
+			convertedString += m.variable(convertTerm(e.left, m).toString); // FIXME ?
+			convertedString += " ";
+			convertedString += m.variable(convertTerm(e.right, m).toString); // FIXME ?
+			convertedString += m.close();
+			return convertedString
+		}
+		else
+		{
+			convertedString += m.open();
+			convertedString += m.not();
+			convertedString += m.open();
+			convertedString += m.equals_();
+			convertedString += m.variable(convertTerm(e.left, m).toString); // FIXME ?
+			convertedString += " ";
+			convertedString += m.variable(convertTerm(e.right, m).toString); // FIXME ?
+			convertedString += m.close();
+			convertedString += m.close();
+			return convertedString
+		}
 	}
 
 	def dispatch String convertSentence(Predicate p, MapToClif m) {
@@ -337,7 +353,13 @@ class TptpGenerator extends AbstractGenerator {
 	def dispatch String convertSentence(InfixComparisonExpression e, Mapping m) {
 		var convertedString = new String;
 		convertedString += m.variable(convertTerm(e.left, m).toString); // FIXME
-		convertedString += m.equals_();
+		if (e.operator.equals("="))
+		{
+			convertedString += m.equals_();
+			}
+		else {
+			convertedString += m.notequals();
+			}
 		convertedString += m.variable(convertTerm(e.right, m).toString); // FIXME
 		return convertedString
 	}
@@ -407,6 +429,8 @@ interface Mapping {
 	def String end()
 
 	def String equals_()
+	
+	def String notequals()
 
 	def String comment(String string)
 
@@ -481,6 +505,10 @@ class MapToClif implements Mapping {
 
 	override String equals_() {
 		return "=";
+	}
+
+	override String notequals() {
+		throw new UnsupportedOperationException("TODO: auto-generated method stub")
 	}
 
 	override comment(String string) {
@@ -577,6 +605,10 @@ class MapToMathML implements Mapping {
 
 	override String equals_() {
 		return "<mo>=</mo>";
+	}
+
+	override String notequals() {
+		return "<mo>&#x2260;<!--NOT EQUAL TO--></mo>";
 	}
 
 	override String end() {
@@ -691,6 +723,10 @@ class MapToMathOMML implements Mapping {
 		return symbolPrefix + "=" + symbolTrailer;
 	}
 
+	override String notequals() {
+		return symbolPrefix + "≠" + symbolTrailer;
+	}
+
 	override comment(String string) {
 		return "<!-- " + string + " -->"
 	}
@@ -764,6 +800,10 @@ class MapToUnicode implements Mapping {
 
 	override String equals_() {
 		return "=";
+	}
+
+	override String notequals() {
+		return "≠";
 	}
 
 	override comment(String string) {
@@ -905,6 +945,10 @@ class MapToTeX implements Mapping {
 
 	override String equals_() {
 		return "=";
+	}
+
+	override String notequals() {
+		return "\neq";
 	}
 
 	override comment(String string) {
