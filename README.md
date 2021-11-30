@@ -66,7 +66,7 @@ Syntax verification does not check for unbound variables.
 
 ## Development
 
-`mvn package` in `br.ufes.inf.nemo.teep.parent` produces (among many other files) a repository zip file under `br.ufes.inf.nemo.teep.repository\br.ufes.inf.nemo.teep.repository\target`.
+`mvn package` in `br.ufes.inf.nemo.teep.parent` produces (among many other files) a repository zip file under `br.ufes.inf.nemo.teep.repository/br.ufes.inf.nemo.teep.repository/target`.
 
 ## License
 
