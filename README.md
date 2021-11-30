@@ -43,8 +43,10 @@ Example in CLIF:
 ![Example .clif file](./docs/screenshots/clif.png)
 Example in LaTeX:
 ![Example .tex file](./docs/screenshots/latex-eqnarray.png)
-Example in HTML with MathML (generated MathML can be copied-and-pasted as equations in Word; for that, copy each `<math>`...`</math>` fragment and paste it as unformatted text in Word):
+Example in HTML with MathML:
 ![Example .html file](./docs/screenshots/html.png)
+Generated MathML can be copied-and-pasted as equations in Word; for that, copy each `<math>`...`</math>` fragment and paste it as unformatted text in Word:
+![Example in Word equations](./docs/screenshots/word.png)
 Example in plain-text ASCII:
 ![Example .txt file](./docs/screenshots/plain-text-ascii.png)
 
