@@ -25,7 +25,7 @@ See <https://github.com/marklemay/tptpParser> for a different project unaffiliat
 
 Open Eclipse and go to "Help->Install New Software..."
 
-Select "Add..." and then "Archive..." Point to the `br.ufes.inf.nemo.teep.repository-1.0.0-SNAPSHOT.zip` file you downloaded from [releases](https://github.com/nemo-ufes/tptp-editor-eclipse-plugin/releases) (or directly [here](https://github.com/nemo-ufes/tptp-editor-eclipse-plugin/releases/download/v1.0.0-SNAPSHOT/br.ufes.inf.nemo.teep.repository-1.0.0-SNAPSHOT.zip)). You may optionally give a name to the repository (say "Teep local repository.")
+Select "Add..." and then "Archive..." Point to the `br.ufes.inf.nemo.teep.repository-1.0.0-SNAPSHOT.zip` file you downloaded from [releases](https://github.com/nemo-ufes/tptp-editor-eclipse-plugin/releases) (or directly [here](https://github.com/nemo-ufes/tptp-editor-eclipse-plugin/releases/download/v1.0.0-SNAPSHOT-202111302129/br.ufes.inf.nemo.teep.repository-1.0.0-SNAPSHOT.zip)). You may optionally give a name to the repository (say "Teep local repository.")
 
 Select then the "Tptp" feature and click "Next>" and "Finish". Eclipse will calculate all the required dependencies and install them. It will warn you that you are installing unsigned software. Click "Install Anyway" and restart Eclipse.
 
