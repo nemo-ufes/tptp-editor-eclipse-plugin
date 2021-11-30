@@ -43,7 +43,7 @@ Example in CLIF:
 ![Example .clif file](./docs/screenshots/clif.png)
 Example in LaTeX:
 ![Example .tex file](./docs/screenshots/latex-eqnarray.png)
-Example in HTML with MathML:
+Example in HTML with MathML (generated MathML can be copied-and-pasted as equations in Word; for that, copy each `<math>`...`</math>` fragment and paste it as unformatted text in Word):
 ![Example .html file](./docs/screenshots/html.png)
 Example in plain-text ASCII:
 ![Example .txt file](./docs/screenshots/plain-text-ascii.png)
@@ -54,9 +54,19 @@ If you find teep useful, please let us know <mailto:jpalmeida@ieee.org>.
 
 ## Limitations
 
-Only part of the first-order fragment of the TPTP syntax is supported. There is no special support for pre-defined predicates (such as less, greater than, etc.), propositions (true, false); no support for functors (whether pre-defined or not).
+Only part of the first-order fragment of the TPTP syntax is supported. In particular:
+
+- There is no special support for pre-defined predicates/functors (such as `$less`, `$greater`, `$true`, `$false`).
+- There is no support for the `include` directive.
+- There is no support for quoted symbols.
+- There is no support for `<=` reverse implication, `<~>` non-equivalence (XOR), `~|` negated disjunction (NOR), `~&` for negated conjunction (NAND).
+- Only non-negative integers are supported.
 
 Syntax verification does not check for unbound variables.
+
+## Development
+
+`mvn package` in `br.ufes.inf.nemo.teep.parent` produces (among many other files) a repository zip file under `br.ufes.inf.nemo.teep.repository\br.ufes.inf.nemo.teep.repository\target`.
 
 ## License
 

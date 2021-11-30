@@ -1,11 +1,14 @@
-grammar br.ufes.inf.nemo.teep.Tptp with org.eclipse.xtext.common.Terminals
-	hidden (IGNORED_COMMENT, WS)
+grammar br.ufes.inf.nemo.teep.Tptp
+	hidden (IGNORED_COMMENT, ML_COMMENT, WS)
+
+import "http://www.eclipse.org/emf/2002/Ecore" as ecore
 
 generate tptp "http://www.ufes.br/inf/nemo/teep/Tptp"
 
-// simplified version of http://www.tptp.org/TPTP/SyntaxBNF.html#fof_formula
-
 // TODO: document supported syntax subset
+// TODO: test grammar with problem set in TPTP
+
+// simplified version of http://www.tptp.org/TPTP/SyntaxBNF.html#fof_formula
 
 Specification:
 		sentences+=Sentence+;
@@ -29,8 +32,12 @@ terminal COMMENT:
 
 terminal IGNORED_COMMENT : '%'(!'%') !('\n'|'\r')* ('\r'? '\n')?;
     
+terminal ML_COMMENT : '/*' -> '*/';
+
+terminal WS         : (' '|'\t'|'\r'|'\n')+;    
+    
 AnnotatedFormula:
-	'fof(' name=LOWERWORD "," role=FormulaRole "," expr=Expression  ').';
+	'fof(' name=(LOWERWORD|UNSIGNEDINTEGER) "," role=FormulaRole "," expr=Expression  ').';
 
 enum FormulaRole:
 	AXIOM="axiom" | 
@@ -62,15 +69,10 @@ UnitExpression returns Expression:
 	 NegationExpression | InfixComparisonExpression | UnitaryExpression;
 
 NegationExpression returns Expression:
-	{NegationExpression} '~' operand=UnitExpression
-;
+	{NegationExpression} '~' operand=UnitExpression;
 
 InfixComparisonExpression returns Expression:
-	Variable {InfixComparisonExpression.left=current} operator=("="|"!=") right=ComparisonExpressionRhs;
-	
-
-ComparisonExpressionRhs:	
-	Variable | Constant;
+	Term {InfixComparisonExpression.left=current} operator=("="|"!=") right=Term;
 	
 UnitaryExpression returns Expression:
  	QuantifiedExpression |
@@ -92,19 +94,28 @@ Predicate returns Expression:
 	{Predicate} name=LOWERWORD "(" terms+=Term ("," terms+=Term)* ")"
 ;
 
-Term:
-	Variable | Constant
+Functor:
+	name=LOWERWORD "(" terms+=Term ("," terms+=Term)* ")"
 ;
+
+Term:
+	Variable | Constant | NumberLiteral | Functor
+;
+
+NumberLiteral:
+	literal=UNSIGNEDINTEGER;
+
+terminal UNSIGNEDINTEGER:
+('0'..'9')+;
 
 Constant:
-	 name=LOWERWORD
-;
+	 name=LOWERWORD;
 
-// for constants and predicates
+// Lowerword for constants and predicates
 terminal LOWERWORD: 
     ('a'..'z') ('a'..'z'|'A'..'Z'|'_'|'0'..'9')*; 
 
-// for variables
+// Upperword for variables
 terminal UPPERWORD: 
     ('A'..'Z') ('a'..'z'|'A'..'Z'|'_'|'0'..'9')*; 
 
