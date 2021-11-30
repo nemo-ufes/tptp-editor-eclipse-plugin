@@ -20,6 +20,8 @@ import org.eclipse.emf.ecore.resource.Resource
 import org.eclipse.xtext.generator.AbstractGenerator
 import org.eclipse.xtext.generator.IFileSystemAccess2
 import org.eclipse.xtext.generator.IGeneratorContext
+import br.ufes.inf.nemo.teep.tptp.Functor
+import br.ufes.inf.nemo.teep.tptp.NumberLiteral
 
 /**
  * Generates code from your model files on save.
@@ -30,17 +32,15 @@ class TptpGenerator extends AbstractGenerator {
 
 	override void doGenerate(Resource resource, IFileSystemAccess2 fsa, IGeneratorContext context) {
 
-/// FIXME: add comments for name and role
-/// FIXME: generate html page
+/// FIXME: add comments in the generated tex and html for name and role (role also in clif)
+/// FIXME: generate html page with index for the annotated formulae
 /// TODO: linebreaks and indentation
 		val toMathML = new MapToMathML as Mapping
 		val toMathJax = new MapToMathJax as Mapping
-		val toMathOMML = new MapToMathOMML as Mapping
 		val toUnicode = new MapToUnicode as Mapping
 		val toTeX = new MapToTeX as Mapping
 		val toItemizedTeX = new MapToTeXItemized as Mapping
-
-		// TODO: create a clif mapping
+		
 		val toClif = new MapToClif as Mapping
 
 		val spec = resource.contents.get(0) as Specification
@@ -49,14 +49,15 @@ class TptpGenerator extends AbstractGenerator {
 		fsa.generateFile(filename + '_plain.html', '''
 			«toMathML.preamble»
 			«FOR s : spec.sentences»
-				«toMathML.beginning»				
 				«IF (s instanceof CommentSentence)»
-				<!-- «s.comment» -->
+				<!-- «s.comment.substring(2,s.comment.length-1).trim» -->
 				«ENDIF»
 				«IF (s instanceof AnnotatedFormula)»
+				<!-- «s.name»  «s.role» -->
+				«toMathML.beginning»
 				«s.expr.convertSentence(toMathML)»
-				«ENDIF»
 				«toMathML.end»
+				«ENDIF»
 			«ENDFOR»
 			«toMathML.tailpiece»
 		''')
@@ -65,6 +66,7 @@ class TptpGenerator extends AbstractGenerator {
 			«toMathJax.preamble»
 			«FOR s : spec.sentences»
 				«IF (s instanceof AnnotatedFormula)»
+				<!-- «s.name»  «s.role» -->
 				«toMathJax.beginning»
 				«s.expr.convertSentence(toMathJax)»
 				«toMathJax.end»
@@ -73,22 +75,14 @@ class TptpGenerator extends AbstractGenerator {
 			«toMathJax.tailpiece»
 		''')
 
-		fsa.generateFile(filename + '_word_document.xml', '''
-			«toMathOMML.preamble»
-			«FOR s : spec.sentences»
-				«IF (s instanceof AnnotatedFormula)»
-				«toMathOMML.beginning»
-				«s.expr.convertSentence(toMathOMML)»
-				«toMathOMML.end»
-				«ENDIF»
-			«ENDFOR»
-			«toMathOMML.tailpiece»
-		''')
-
 		fsa.generateFile(filename + '_array.tex', '''
 			«toTeX.preamble»
 			«FOR s : spec.sentences»
+				«IF (s instanceof CommentSentence)»
+				% «s.comment.substring(2,s.comment.length-1).trim»
+				«ENDIF»
 				«IF (s instanceof AnnotatedFormula)»
+				% «s.name»  «s.role»
 				«toTeX.beginning»
 				«s.expr.convertSentence(toTeX)»
 				«toTeX.end»
@@ -100,7 +94,11 @@ class TptpGenerator extends AbstractGenerator {
 		fsa.generateFile(filename + '_itemized.tex', '''
 			«toItemizedTeX.preamble»
 			«FOR s : spec.sentences»
+				«IF (s instanceof CommentSentence)»
+				% «s.comment.substring(2,s.comment.length-1).trim»
+				«ENDIF»			
 				«IF (s instanceof AnnotatedFormula)»
+				% «s.name»  «s.role»
 				«toItemizedTeX.beginning»
 				«s.expr.convertSentence(toItemizedTeX)»
 				«toItemizedTeX.end»
@@ -111,7 +109,11 @@ class TptpGenerator extends AbstractGenerator {
 
 		fsa.generateFile(filename + '.txt', '''
 			«FOR s : spec.sentences»
+				«IF (s instanceof CommentSentence)»
+				«s.comment.substring(2,s.comment.length-1).trim»
+				«ENDIF»
 				«IF (s instanceof AnnotatedFormula)»
+				«s.role» «s.name»:
 				«toUnicode.beginning»
 				«s.expr.convertSentence(toUnicode)»
 				«toUnicode.end»
@@ -122,21 +124,22 @@ class TptpGenerator extends AbstractGenerator {
 		// FIXME: trimming is a bit radical for comments, check comments for need to escape single quote
 		fsa.generateFile(filename + '.clif', '''
 			«FOR s : spec.sentences»
-				«IF (s instanceof CommentSentence)»(cl-comment '«s.comment.substring(2,s.comment.length-1).trim»')«ENDIF»
-				«IF (s instanceof AnnotatedFormula)»«toClif.beginning» «s.name»
+				«IF (s instanceof CommentSentence)»(cl-comment '«s.comment.substring(2,s.comment.length-1).trim.replace("'", "\\'")»')«ENDIF»
+				«IF (s instanceof AnnotatedFormula)»(cl-comment '«s.role»')
+				«toClif.beginning» «s.name»
 				«s.expr.convertSentence(toClif)»
 				«toClif.end»«ENDIF»
 			«ENDFOR»
 		''')
 
 	}
-
-/**
- * changes were required to convertSentence to treat special ordering in clif
- */
+	
+	/**
+ 	* 	convertSentence needs special treatment for ordering in clif
+ 	*/
  
  	def dispatch String convertSentence(QuantifiedExpression qs, MapToClif m) '''
-		«m.open»«IF (qs.quantifier=="!")»«m.forall»«ENDIF»«IF (qs.quantifier=="?")»«m.exists»«ENDIF» «FOR var_ : qs.variables BEFORE m.open SEPARATOR ' ' AFTER m.close»«m.variable(convertTerm(var_, m))»«ENDFOR»
+		«m.open»«IF (qs.quantifier=="!")»«m.forall»«ENDIF»«IF (qs.quantifier=="?")»«m.exists»«ENDIF» «FOR var_ : qs.variables BEFORE m.open SEPARATOR ' ' AFTER m.close»«convertTerm(var_, m)»«ENDFOR»
 			«convertSentence(qs.formula, m)»«m.close»
 	'''
 
@@ -192,17 +195,38 @@ class TptpGenerator extends AbstractGenerator {
 		return convertedString
 	}
 
-	// FIXME: inequality
 	def dispatch String convertSentence(InfixComparisonExpression e, MapToClif m) {
 		var convertedString = new String;
-		
-		convertedString += m.open();
-		convertedString += m.equals_();
-		convertedString += m.variable(convertTerm(e.left, m).toString); // FIXME ?
-		convertedString += " ";
-		convertedString += m.variable(convertTerm(e.right, m).toString); // FIXME ?
-		convertedString += m.close();
-		return convertedString
+
+		if (e.operator.equals("="))
+		{		
+			convertedString += m.open();
+			convertedString += m.equals_();
+			convertedString += " ";
+			convertedString += convertTerm(e.left, m); 
+
+			convertedString += " ";
+			convertedString += convertTerm(e.right, m);
+			convertedString += m.close();
+			return convertedString
+		}
+		else
+		{
+			convertedString += m.open();
+			convertedString += m.not();
+			convertedString += " ";
+			convertedString += m.open();
+			convertedString += m.equals_();
+			convertedString += " ";
+			convertedString += convertTerm(e.left, m); 
+
+			convertedString += " ";
+			convertedString += convertTerm(e.right, m);
+
+			convertedString += m.close();
+			convertedString += m.close();
+			return convertedString
+		}
 	}
 
 	def dispatch String convertSentence(Predicate p, MapToClif m) {
@@ -213,8 +237,25 @@ class TptpGenerator extends AbstractGenerator {
 		convertedString += " ";
 		var i = 0;
 		for (t : p.terms) {
-			convertedString += m.variable(convertTerm(t, m)); // could be constant
+			convertedString += convertTerm(t, m); 
 			if (i < p.terms.size() - 1)
+				convertedString += " ";
+			i++;
+		}
+		convertedString += m.close();
+		return convertedString;
+	}
+	
+	def dispatch String convertTerm(Functor f, MapToClif m) {
+		var convertedString = new String
+		
+		convertedString += m.open();
+		convertedString += m.predicate(f.name);
+		convertedString += " ";
+		var i = 0;
+		for (t : f.terms) {
+			convertedString += convertTerm(t, m); 
+			if (i < f.terms.size() - 1)
 				convertedString += " ";
 			i++;
 		}
@@ -236,7 +277,7 @@ class TptpGenerator extends AbstractGenerator {
 		var i = 0;
 
 		for (var_ : qs.variables) {
-			convertedString += m.variable(convertTerm(var_, m));
+			convertedString += convertTerm(var_, m);
 			if (i < qs.variables.size() - 1) {
 				convertedString += m.comma();
 			}
@@ -263,6 +304,7 @@ class TptpGenerator extends AbstractGenerator {
 			case "<=>": m.iff()
 			case "=>": m.if_()
 		// FIXME support other kinds of operators
+		// <nonassoc_connective>  ::= <=> | => | <= | <~> | ~<vline> | ~&
 		}
 
 		if (expr.right instanceof BinaryNonAssociativeExpression) {
@@ -333,12 +375,19 @@ class TptpGenerator extends AbstractGenerator {
 		return convertedString
 	}
 
-	// FIXME: inequality
+
 	def dispatch String convertSentence(InfixComparisonExpression e, Mapping m) {
 		var convertedString = new String;
-		convertedString += m.variable(convertTerm(e.left, m).toString); // FIXME
-		convertedString += m.equals_();
-		convertedString += m.variable(convertTerm(e.right, m).toString); // FIXME
+		convertedString += convertTerm(e.left, m);
+		if (e.operator.equals("="))
+		{
+			convertedString += m.equals_();
+			}
+		else {
+			convertedString += m.notequals();
+			}
+//
+		convertedString += convertTerm(e.right, m);
 		return convertedString
 	}
 
@@ -348,7 +397,7 @@ class TptpGenerator extends AbstractGenerator {
 		convertedString += m.open();
 		var i = 0;
 		for (t : p.terms) {
-			convertedString += m.variable(convertTerm(t, m)); // could be constant
+			convertedString += convertTerm(t, m); 
 			if (i < p.terms.size() - 1)
 				convertedString += m.comma();
 			i++;
@@ -356,14 +405,39 @@ class TptpGenerator extends AbstractGenerator {
 		convertedString += m.close();
 		return convertedString;
 	}
+	
+	def dispatch String convertSentence(Constant c, Mapping m) {
+		return m.constant(c.name.toFirstUpper);
+	}
 
 	def dispatch String convertTerm(Variable v, Mapping m) {
-		return v.name.toLowerCase;
+		return m.variable(v.name.toLowerCase);
 	}
 
 	def dispatch String convertTerm(Constant c, Mapping m) {
-		return c.name.toFirstUpper;
+		return m.constant(c.name.toFirstUpper);
 	}
+	
+	def dispatch String convertTerm(NumberLiteral n, Mapping m) {
+		return m.numberLiteral(n.literal);
+	}
+	
+	def dispatch String convertTerm(Functor f, Mapping m) {
+		var convertedString = new String
+		convertedString += m.predicate(f.name);
+		convertedString += m.open();
+		var i = 0;
+		for (t : f.terms) {
+			convertedString += convertTerm(t, m);
+			
+			if (i < f.terms.size() - 1)
+				convertedString += m.comma();
+			i++;
+		}
+		convertedString += m.close();
+		return convertedString;
+	}
+	
 
 	def dispatch convertSentence(Expression e, Mapping m) '''
 		«e.toString» 		
@@ -382,9 +456,14 @@ interface Mapping {
 
 	def String existsOne()
 
+	// also used for functor
 	def String predicate(String name)
 
 	def String variable(String name)
+
+	def String numberLiteral(String literal)
+
+	def String constant(String name)
 
 	def String open()
 
@@ -407,10 +486,13 @@ interface Mapping {
 	def String end()
 
 	def String equals_()
+	
+	def String notequals()
 
 	def String comment(String string)
 
 	def String tailpiece()
+	
 }
 
 class MapToClif implements Mapping {
@@ -436,6 +518,14 @@ class MapToClif implements Mapping {
 	}
 
 	override String variable(String name) {
+		return name;
+	}
+
+	override String numberLiteral(String literal) {
+		return literal;
+	}
+	
+	override String constant(String name) {
 		return name;
 	}
 
@@ -483,6 +573,10 @@ class MapToClif implements Mapping {
 		return "=";
 	}
 
+	override String notequals() {
+		throw new UnsupportedOperationException("TODO: auto-generated method stub")
+	}
+
 	override comment(String string) {
 		return string;
 	}
@@ -504,29 +598,37 @@ class MapToMathML implements Mapping {
 		<html>
 		  <head>
 		    <meta http-equiv="content-type" content="text/html; charset=UTF-8">
-		    <title>test</title>
+		    <title>MathML Document</title>
 		  </head>
 		  <body>
 	'''
 
 	override String beginning() '''
-		<p><?xml version="1.0"?>
-		<math xmlns="http://www.w3.org/1998/Math/MathML" display="block">
+			<p>
+			<math xmlns="http://www.w3.org/1998/Math/MathML" display="block">
 	'''
 
 	override String forall() {
-		return "<mi mathvariant=\"normal\">&#x2200;<!-- ∀ --></mi>";
+		return "<mo>&#x2200;<!-- ∀ --></mo>";
 	}
 
 	override String exists() {
-		return "<mi mathvariant=\"normal\">&#x2203;<!-- ∃ --></mi>";
+		return "<mo>&#x2203;<!-- ∃ --></mo>";
 	}
 
 	override String existsOne() {
-		return "<mi mathvariant=\"normal\">&#x2203;!<!-- ∃! --></mi>";
+		return "<mo>&#x2203;!<!-- ∃! --></mo>";
 	}
 
 	override String predicate(String name) {
+		return "<mi mathvariant=\"normal\">" + name + "</mi>";
+	}
+
+	override String numberLiteral(String literal) {
+		return "<mn>" + literal + "</mn>";
+	}
+	
+	override String constant(String name) {
 		return "<mi mathvariant=\"normal\">" + name + "</mi>";
 	}
 
@@ -556,7 +658,7 @@ class MapToMathML implements Mapping {
 	}
 
 	override String not() {
-		return "<mi mathvariant=\"normal\">&#x00AC;<!-- ¬ --></mi>";
+		return "<mo>&#x00AC;<!-- ¬ --></mo>";
 	}
 
 	override String and() {
@@ -579,8 +681,12 @@ class MapToMathML implements Mapping {
 		return "<mo>=</mo>";
 	}
 
+	override String notequals() {
+		return "<mo>&#x2260;<!-- ≠ --></mo>";
+	}
+
 	override String end() {
-		return "</math></p>";
+		return "</math>\n</p>";
 	}
 
 	override comment(String string) {
@@ -592,107 +698,6 @@ class MapToMathML implements Mapping {
 			  </body>
 			</html>
 		'''
-	}
-
-}
-
-class MapToMathOMML implements Mapping {
-	// document.xml
-	// remover <m:rPr><m:sty m:val="p"/></m:rPr> quando for italico
-	def String symbolPrefix() '''<m:r><m:rPr><m:sty m:val="p"/></m:rPr><w:rPr><w:rFonts w:ascii="Cambria Math" w:hAnsi="Cambria Math"/><w:lang w:val="pt-BR"/></w:rPr><m:t>'''
-
-	def String italicsSymbolPrefix() '''<m:r><w:rPr><w:rFonts w:ascii="Cambria Math" w:hAnsi="Cambria Math"/><w:lang w:val="pt-BR"/></w:rPr><m:t>'''
-
-	def String symbolTrailer() '''</m:t></m:r>'''
-
-	override String preamble() '''
-		<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-		<w:document xmlns:wpc="http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas" xmlns:cx="http://schemas.microsoft.com/office/drawing/2014/chartex" xmlns:cx1="http://schemas.microsoft.com/office/drawing/2015/9/8/chartex" xmlns:cx2="http://schemas.microsoft.com/office/drawing/2015/10/21/chartex" xmlns:cx3="http://schemas.microsoft.com/office/drawing/2016/5/9/chartex" xmlns:cx4="http://schemas.microsoft.com/office/drawing/2016/5/10/chartex" xmlns:cx5="http://schemas.microsoft.com/office/drawing/2016/5/11/chartex" xmlns:cx6="http://schemas.microsoft.com/office/drawing/2016/5/12/chartex" xmlns:cx7="http://schemas.microsoft.com/office/drawing/2016/5/13/chartex" xmlns:cx8="http://schemas.microsoft.com/office/drawing/2016/5/14/chartex" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:aink="http://schemas.microsoft.com/office/drawing/2016/ink" xmlns:am3d="http://schemas.microsoft.com/office/drawing/2017/model3d" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:wp14="http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:w10="urn:schemas-microsoft-com:office:word" xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml" xmlns:w15="http://schemas.microsoft.com/office/word/2012/wordml" xmlns:w16cid="http://schemas.microsoft.com/office/word/2016/wordml/cid" xmlns:w16se="http://schemas.microsoft.com/office/word/2015/wordml/symex" xmlns:wpg="http://schemas.microsoft.com/office/word/2010/wordprocessingGroup" xmlns:wpi="http://schemas.microsoft.com/office/word/2010/wordprocessingInk" xmlns:wne="http://schemas.microsoft.com/office/word/2006/wordml" xmlns:wps="http://schemas.microsoft.com/office/word/2010/wordprocessingShape" mc:Ignorable="w14 w15 w16se w16cid wp14"><w:body><w:p w:rsidR="00FB1FE0" w:rsidRDefault="00CB1F42"><w:pPr><w:rPr><w:lang w:val="pt-BR"/></w:rPr></w:pPr><w:r><w:rPr><w:lang w:val="pt-BR"/></w:rPr><w:t>Antes</w:t></w:r></w:p><w:p w:rsidR="00CB1F42" w:rsidRPr="004A4E9D" w:rsidRDefault="00CB1F42"><w:pPr><w:rPr><w:rFonts w:eastAsiaTheme="minorEastAsia"/><w:lang w:val="pt-BR"/></w:rPr></w:pPr>
-	'''
-
-	override String beginning() '''</w:p><w:p w:rsidR="001F6A6A" w:rsidRDefault="001F6A6A"><w:pPr><w:rPr><w:rFonts w:eastAsiaTheme="minorEastAsia"/></w:rPr></w:pPr></w:p><w:p w:rsidR="001F6A6A" w:rsidRPr="001F6A6A" w:rsidRDefault="001F6A6A"><w:pPr><w:rPr><w:rFonts w:eastAsiaTheme="minorEastAsia"/></w:rPr></w:pPr>
-						
-						<m:oMathPara><m:oMath>'''
-
-	override String end() {
-		'''</m:oMath></m:oMathPara>
-						
-						'''
-	}
-
-	override tailpiece() {
-		'''</w:p><w:p w:rsidR="00CB1F42" w:rsidRPr="00CB1F42" w:rsidRDefault="00CB1F42"><w:pPr><w:rPr><w:lang w:val="pt-BR"/></w:rPr></w:pPr><w:r><w:rPr><w:lang w:val="pt-BR"/></w:rPr><w:t>depois</w:t></w:r><w:bookmarkStart w:id="0" w:name="_GoBack"/><w:bookmarkEnd w:id="0"/></w:p><w:sectPr w:rsidR="00CB1F42" w:rsidRPr="00CB1F42" w:rsidSect="000F0BB1"><w:pgSz w:w="11900" w:h="16840"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="708" w:footer="708" w:gutter="0"/><w:cols w:space="708"/><w:docGrid w:linePitch="360"/></w:sectPr></w:body></w:document>
-		'''
-	}
-
-	override String forall() {
-		return symbolPrefix + "∀" + symbolTrailer;
-	}
-
-	override String exists() {
-		return symbolPrefix + "∃" + symbolTrailer;
-	}
-
-	override String existsOne() {
-		return symbolPrefix + "∃!" + symbolTrailer;
-	}
-
-	override String predicate(String name) {
-		return symbolPrefix + name + symbolTrailer;
-	}
-
-	override String variable(String name) {
-//TODO
-//						if (name.indexOf("_") != -1)
-//							// treat superscript
-//							return "<msub>" + "<mi mathvariant=\"italic\">" + name.substring(0, name.indexOf("_")) +
-//								"</mi>" + "<mi mathvariant=\"italic\">" +
-//								name.substring(name.indexOf("_") + 1, name.length()) + "</mi>" + "</msub>";
-		return italicsSymbolPrefix + name + symbolTrailer;
-	}
-
-	override String open() {
-		return symbolPrefix + "(" + symbolTrailer;
-	}
-
-	override String close() {
-		return symbolPrefix + ")" + symbolTrailer;
-	}
-
-	override String iff() {
-		return symbolPrefix + "↔" + symbolTrailer;
-	}
-
-	override String if_() {
-		return symbolPrefix + "→" + symbolTrailer;
-	}
-
-	override String not() {
-		return symbolPrefix + "¬" + symbolTrailer;
-	}
-
-	override String and() {
-		return symbolPrefix + "∧" + symbolTrailer;
-	}
-
-	override String or() {
-		return symbolPrefix + "∨" + symbolTrailer;
-	}
-
-	override String comma() {
-		return symbolPrefix + "," + symbolTrailer;
-	}
-
-	override String colon() {
-		return symbolPrefix + ":" + symbolTrailer;
-	}
-
-	override String equals_() {
-		return symbolPrefix + "=" + symbolTrailer;
-	}
-
-	override comment(String string) {
-		return "<!-- " + string + " -->"
 	}
 
 }
@@ -719,6 +724,14 @@ class MapToUnicode implements Mapping {
 	}
 
 	override String variable(String name) {
+		return name;
+	}
+
+	override String numberLiteral(String literal) {
+		return literal;
+	}
+
+	override String constant(String name) {
 		return name;
 	}
 
@@ -751,7 +764,7 @@ class MapToUnicode implements Mapping {
 	}
 
 	override String end() {
-		return "";
+		return "\n";
 	}
 
 	override String comma() {
@@ -766,6 +779,10 @@ class MapToUnicode implements Mapping {
 		return "=";
 	}
 
+	override String notequals() {
+		return "≠";
+	}
+
 	override comment(String string) {
 		return string;
 	}
@@ -778,64 +795,6 @@ class MapToUnicode implements Mapping {
 		throw new UnsupportedOperationException("TODO: auto-generated method stub")
 	}
 
-}
-
-class MapToMathJax extends MapToTeX {
-	override preamble() {
-		'''
-			<!DOCTYPE html>
-			<html>
-			<head>
-			    <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-			    <title>tex texample</title>
-			</head>
-			<body>
-		'''
-	}
-
-	override String beginning() {
-		return "$$";
-	}
-
-	override String end() {
-		return "$$";
-	}
-
-	override tailpiece() {
-		'''
-			</body>
-			</html>
-		'''
-	}
-
-}
-
-class MapToTeXItemized extends MapToTeX {
-	override preamble() {
-		'''
-			\documentclass{article}
-			\usepackage[utf8]{inputenc}
-			\begin{document}
-			
-			\begin{enumerate}
-		'''
-	}
-
-	override String beginning() {
-		return "\\item $";
-	}
-
-	override String end() {
-		return "$";
-	}
-
-	override tailpiece() {
-		'''
-			\end{enumerate}
-			
-			\end{document}
-		'''
-	}
 }
 
 class MapToTeX implements Mapping {
@@ -860,6 +819,14 @@ class MapToTeX implements Mapping {
 	}
 
 	override String variable(String name) {
+		return name;
+	}
+	
+	override String numberLiteral(String literal) {
+		return literal;
+	}
+
+	override String constant(String name) {
 		return name;
 	}
 
@@ -907,6 +874,10 @@ class MapToTeX implements Mapping {
 		return "=";
 	}
 
+	override String notequals() {
+		return "\\neq ";
+	}
+
 	override comment(String string) {
 		return string;
 	}
@@ -925,4 +896,66 @@ class MapToTeX implements Mapping {
 		'''
 	}
 
+}
+
+class MapToMathJax extends MapToTeX {
+	override preamble() {
+		'''
+			<!DOCTYPE html>
+			<html>
+			<head>
+			    <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+			    <title>MathJax Document</title>
+			</head>
+			<body>
+		'''
+	}
+
+	override String beginning() {
+		return "$$";
+	}
+
+	override String end() {
+		return "$$";
+	}
+
+	override String predicate(String name) {
+		return "\\textsf{" + name + "}";   // overriden because does not need escaping the underscore
+	}
+
+	override tailpiece() {
+		'''
+			</body>
+			</html>
+		'''
+	}
+
+}
+
+class MapToTeXItemized extends MapToTeX {
+	override preamble() {
+		'''
+			\documentclass{article}
+			\usepackage[utf8]{inputenc}
+			\begin{document}
+			
+			\begin{enumerate}
+		'''
+	}
+
+	override String beginning() {
+		return "\\item $";
+	}
+
+	override String end() {
+		return "$";
+	}
+
+	override tailpiece() {
+		'''
+			\end{enumerate}
+			
+			\end{document}
+		'''
+	}
 }
